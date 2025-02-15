@@ -98,13 +98,13 @@ Dieses Projekt generiert beidseitige Spielkarten (ähnlich denen von Magic: The 
    - Das Skript erzeugt für jeden Spell im CSV-Dokument zwei PNGs (Front- und Rückseite) im Ordner `output`.
    - Anschließend wird ein PDF (`cards_double_sided.pdf`) erstellt, in dem die Karten so angeordnet sind, dass beim doppelseitigen Druck die Vorderseiten in der Reihenfolge  
      ```
-     1  2
-     3  4
+     1  2  3  4 
+     5  6  7  8
      ```
      und die Rückseiten in der Reihenfolge  
      ```
-     2  1
-     4  3
+     4  3  2  1
+     8  7  6  5
      ```
      erscheinen.
 
@@ -121,4 +121,4 @@ Dieses Projekt generiert beidseitige Spielkarten (ähnlich denen von Magic: The 
   Der Parameter `wrap_width` wird dynamisch an die aktuelle Fontgröße geknüpft, sodass der Text optimal umgebrochen wird. Falls du Probleme mit zu frühem oder zu spätem Umbrechen hast, kannst du diesen Ansatz im Code weiter anpassen.
 
 - **Layout der A4-PDF-Seiten:**  
-  Die Anordnung der Karten auf A4-Seiten (2×2-Raster) und die Reihenfolge (bei Rückseiten: 2 1 / 4 3) können im entsprechenden Abschnitt des PDF-Erstellungscodes modifiziert werden.
+  Die Anordnung der Karten auf A4-Seiten (4×2-Raster) und die Reihenfolge (bei Rückseiten: 4 3 2 1 / 5 6 7 8) können im entsprechenden Abschnitt des PDF-Erstellungscodes modifiziert werden.

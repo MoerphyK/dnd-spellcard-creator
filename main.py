@@ -7,6 +7,7 @@ import textwrap
 # Pfade zu den Assets
 # --------------------------
 ASSETS_DIR = "assets"
+ILLUSTRATIONS_DIR = os.path.join(ASSETS_DIR, "illustrations")
 OUTPUT_DIR = "output"
 CSV_DIR    = "csv"
 
@@ -19,7 +20,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 front_bg = Image.open(os.path.join(ASSETS_DIR, "front_background.png")).convert("RGBA")
 back_bg = Image.open(os.path.join(ASSETS_DIR, "back_background.png")).convert("RGBA")
 spellname_banner = Image.open(os.path.join(ASSETS_DIR, "spellname_banner.png")).convert("RGBA")
-illustration = Image.open(os.path.join(ASSETS_DIR, "illustration.png")).convert("RGBA")
+# illustration = Image.open(os.path.join(ASSETS_DIR, "illustration.png")).convert("RGBA")
 front_frame = Image.open(os.path.join(ASSETS_DIR, "front_frame.png")).convert("RGBA")
 
 # --------------------------
@@ -65,26 +66,28 @@ def get_text_size(draw, text, font):
 # --------------------------
 # Hilfsfunktion: Optimale Schriftgröße finden
 # --------------------------
-def find_optimal_font_size(draw, lines, font_path, min_font_size, max_font_size, max_width, max_height, line_spacing, paragraph_spacing):
+def find_optimal_font_size(draw, text, font_path, min_font_size, max_font_size, max_width, max_height, line_spacing, paragraph_spacing):
     """
     Sucht den größtmöglichen Font-Wert zwischen min_font_size und max_font_size,
-    sodass alle Zeilen (inklusive Zeilen- und Absatzabstände) in den Bereich passen.
-    Dabei sind:
-      - lines: Liste von Zeilen bzw. Absatz-Markern (None) wie in unserer draw_text_left_aligned_at-Funktion.
-      - max_width: maximale Breite in Pixeln.
-      - max_height: maximale Höhe in Pixeln.
-      - line_spacing: zusätzlicher Abstand zwischen Zeilen.
-      - paragraph_spacing: zusätzlicher Abstand zwischen Absätzen (bei None als Marker).
+    sodass der umgebrochene Text (bei dynamisch berechnetem wrap_width) in den Bereich passt.
     """
-    def fits(font):
-        # Prüfe, ob jede Zeile in max_width passt
-        for line in lines:
-            if line is not None:
-                if get_text_size(draw, line, font)[0] > max_width:
-                    return False
-        return True
+    def get_lines_for_font(font, text):
+        # Berechne den effektiven wrap_width für die aktuelle Font
+        eff_wrap = effective_wrap_width(draw, font, max_width)
+        paragraphs = text.splitlines()
+        lines = []
+        for para in paragraphs:
+            if para.strip():
+                wrapped = textwrap.wrap(para, width=eff_wrap)
+                lines.extend(wrapped)
+            else:
+                lines.append(None)
+        return lines
 
-    def total_text_height(font):
+    def lines_fit(font, lines):
+        return all(get_text_size(draw, line, font)[0] <= max_width for line in lines if line is not None)
+
+    def total_text_height(font, lines):
         total = 0
         for line in lines:
             if line is None:
@@ -92,21 +95,33 @@ def find_optimal_font_size(draw, lines, font_path, min_font_size, max_font_size,
             else:
                 total += get_text_size(draw, line, font)[1] + line_spacing
         if total > 0:
-            total -= line_spacing  # Kein extra Abstand nach der letzten Zeile
+            total -= line_spacing
         return total
 
     low = min_font_size
     high = max_font_size
-    best = low  # mindestens min_font_size verwenden
+    best = low
     while low <= high:
         mid = (low + high) // 2
         font = ImageFont.truetype(font_path, mid)
-        if fits(font) and total_text_height(font) <= max_height:
-            best = mid  # mid passt, versuche einen größeren Wert
+        lines = get_lines_for_font(font, text)
+        if lines_fit(font, lines) and total_text_height(font, lines) <= max_height:
+            best = mid  # Dieser Wert passt; versuche einen größeren Font
             low = mid + 1
         else:
             high = mid - 1
     return best
+
+# --------------------------
+# Hilfsfunktion: Effektive Umbruchbreite
+# --------------------------
+def effective_wrap_width(draw, font, max_width):
+    # Bestimme die Breite eines typischen Zeichens, z. B. "M"
+    char_width, _ = get_text_size(draw, "M", font)
+    if char_width == 0:
+        return 1
+    return max(1, int(max_width // char_width))
+
 
 # --------------------------
 # Funktion: Text an vorgegebener Position zentriert zeichnen
@@ -160,119 +175,41 @@ def draw_text_centered_at(draw, center, text, font_path, max_width, max_height, 
         draw.text((start_x, start_y), line, font=font, fill=fill)
         start_y += text_height
 
-# --------------------------
-# Funktion: Text an vorgegebener Position linksbündig zeichnen
-# --------------------------
-# def draw_text_left_aligned_at(draw, top_left, text, font_path, max_width, max_height, max_font_size, fill="black", wrap_width=20, line_spacing=2, paragraph_spacing=10):
-#     """
-#     Zeichnet den übergebenen Text linksbündig innerhalb eines definierten Bereichs, 
-#     wobei vorhandene Zeilenumbrüche (Absatzwechsel) beibehalten und zusätzlich 
-#     ein fester Absatzabstand (paragraph_spacing) zwischen Absätzen eingefügt wird.
-    
-#     Der Text wird in Absätze aufgeteilt; jeder nicht-leere Absatz wird mittels textwrap.wrap 
-#     in Zeilen aufgeteilt. Leere Absätze (also durch einen doppelten Zeilenumbruch) 
-#     werden als Absatzwechsel behandelt.
-    
-#     Anschließend wird die Schriftgröße dynamisch reduziert, bis alle Zeilen 
-#     in max_width passen und der gesamte Textblock (inkl. zusätzlichem Absatzabstand) 
-#     höchstens max_height hoch ist.
-    
-#     Parameter:
-#       - draw: Das ImageDraw-Objekt.
-#       - top_left: Tuple (x, y), der obere linke Rand des erlaubten Bereichs.
-#       - text: Der darzustellende Text.
-#       - font_path: Pfad zur TTF-Schriftdatei.
-#       - max_width: Maximale erlaubte Breite in Pixel.
-#       - max_height: Maximale erlaubte Höhe in Pixel.
-#       - max_font_size: Start-Schriftgröße, die ggf. reduziert wird.
-#       - fill: Textfarbe.
-#       - wrap_width: Maximale Anzahl Zeichen pro Zeile für den automatischen Umbruch.
-#       - line_spacing: Zusätzlicher Abstand (in Pixel) zwischen einzelnen Zeilen eines Absatzes.
-#       - paragraph_spacing: Zusätzlicher Abstand (in Pixel) zwischen Absätzen.
-#     """
-#     # Text in Absätze aufteilen (mit vorhandenen Zeilenumbrüchen)
-#     paragraphs = text.splitlines()
-#     # Hier sammeln wir die finalen Zeilen. Zwischen Absätzen (also wenn ein Absatz leer ist)
-#     # wird ein spezieller Marker (None) eingefügt, um später einen Absatzwechsel zu erkennen.
-#     lines = []
-#     for para in paragraphs:
-#         if para.strip():  # nicht-leerer Absatz
-#             wrapped = textwrap.wrap(para, width=wrap_width)
-#             # Falls ein Absatz mehr als eine Zeile hat, füge alle hinzu.
-#             lines.extend(wrapped)
-#         else:
-#             # Leerer Absatz: Absatzwechsel – wir fügen hier einen Marker ein.
-#             lines.append(None)
-    
-#     # Starte mit der maximalen Schriftgröße
-#     font_size = max_font_size
-#     font = ImageFont.truetype(font_path, font_size)
-    
-#     # Prüfe, ob alle nicht-leeren Zeilen in max_width passen
-#     def lines_fit(font):
-#         for line in lines:
-#             if line is not None:
-#                 if get_text_size(draw, line, font)[0] > max_width:
-#                     return False
-#         return True
 
-#     # Berechne die Gesamthöhe des Textblocks, wobei wir zwischen Absätzen einen extra Absatzabstand einfügen.
-#     def total_text_height(font):
-#         total = 0
-#         for line in lines:
-#             if line is None:
-#                 total += paragraph_spacing  # Absatzwechsel: fester Abstand
-#             else:
-#                 total += get_text_size(draw, line, font)[1] + line_spacing
-#         if total > 0:
-#             total -= line_spacing  # kein extra Abstand nach der letzten Zeile
-#         return total
-
-#     # Reduziere die Schriftgröße solange, bis alle Zeilen passen und der Textblock nicht zu hoch wird.
-#     while (not lines_fit(font) or total_text_height(font) > max_height) and font_size > 10:
-#         font_size -= 1
-#         font = ImageFont.truetype(font_path, font_size)
-    
-#     current_y = top_left[1]
-    
-#     # Zeichne Zeile für Zeile:
-#     for line in lines:
-#         if line is None:
-#             # Absatzwechsel: füge extra Absatzabstand hinzu
-#             current_y += paragraph_spacing
-#         else:
-#             text_width, text_height = get_text_size(draw, line, font)
-#             current_x = top_left[0]  # linksbündig: Start bei top_left[0]
-#             draw.text((current_x, current_y), line, font=font, fill=fill)
-#             current_y += text_height + line_spacing
-
-def draw_text_left_aligned_at(draw, top_left, text, font_path, max_width, max_height, max_font_size, fill="black", wrap_width=20, 
-                              line_spacing=2, paragraph_spacing=10, min_font_size=16):
+def draw_text_left_aligned_at(draw, top_left, text, font_path, max_width, max_height, max_font_size, fill="black",
+                              max_wrap_width=1000, line_spacing=2, paragraph_spacing=10, min_font_size=10):
     """
     Zeichnet den übergebenen Text linksbündig innerhalb eines definierten Bereichs.
     
-    Der Text wird in Absätze aufgeteilt (bei leeren Zeilen als Absatzwechsel) und
-    mittels textwrap.wrap in Zeilen aufgeteilt. Anschließend wird die optimale Schriftgröße 
-    (zwischen min_font_size und max_font_size) ermittelt, sodass der Text (inkl. Zeilen- und 
-    Absatzabstände) maximal in den Bereich (max_width x max_height) passt.
+    Der Text wird zunächst in Absätze aufgeteilt und anschließend mittels textwrap.wrap
+    unter Verwendung eines dynamisch berechneten wrap_width (abhängig von der Fontgröße)
+    in Zeilen aufgeteilt. Danach wird mittels einer binären Suche der größtmögliche Font-Wert
+    (zwischen min_font_size und max_font_size) ermittelt, der den gesamten Text (inklusive
+    Zeilen- und Absatzabständen) in den Bereich (max_width x max_height) passen lässt.
     
-    Der Text wird dann linksbündig gezeichnet – beginnend am top_left, ohne vertikale Zentrierung.
+    Der Text wird dann von oben beginnend linksbündig gezeichnet.
     """
-    # Text in Absätze aufteilen:
+    # Finde die optimale Fontgröße mithilfe der dynamischen Berechnung des wrap_width:
+    optimal_size = find_optimal_font_size(draw, text, font_path, min_font_size, max_font_size, max_width, max_height, line_spacing, paragraph_spacing)
+    font = ImageFont.truetype(font_path, optimal_size)
+    
+    # Berechne nun den effektiven wrap_width für die gefundene Font:
+    eff_wrap = effective_wrap_width(draw, font, max_width)
+    # Wenn der Text keine Zeilenumbrüche enthält, könnten wir ihn in einer Zeile belassen:
+    # Hier erlauben wir aber maximal max_wrap_width als Obergrenze.
+    if "\n" not in text and len(text) < eff_wrap:
+        eff_wrap = max_wrap_width
+    
+    # Teile den Text in Zeilen auf (unter Beachtung von vorhandenen Newlines)
     paragraphs = text.splitlines()
     lines = []
     for para in paragraphs:
         if para.strip():
-            wrapped = textwrap.wrap(para, width=wrap_width)
+            wrapped = textwrap.wrap(para, width=eff_wrap)
             lines.extend(wrapped)
         else:
             lines.append(None)
     
-    # Finde die optimale Schriftgröße
-    optimal_size = find_optimal_font_size(draw, lines, font_path, min_font_size, max_font_size, max_width, max_height, line_spacing, paragraph_spacing)
-    font = ImageFont.truetype(font_path, optimal_size)
-    
-    # Zeichne die Zeilen von oben beginnend (ohne vertikale Zentrierung)
     current_y = top_left[1]
     for line in lines:
         if line is None:
@@ -282,8 +219,6 @@ def draw_text_left_aligned_at(draw, top_left, text, font_path, max_width, max_he
             current_x = top_left[0]
             draw.text((current_x, current_y), line, font=font, fill=fill)
             current_y += text_height + line_spacing
-
-
 
 
 # --------------------------
@@ -299,7 +234,14 @@ def create_card(spell_data):
     illustration_pos = (126, 221)
     
     # 1. Illustration einfügen
-    front.paste(illustration, illustration_pos, illustration)
+    illustration = f"{spell_name.lower().replace(" ","_")}.png"
+    illustration_path = os.path.join(ILLUSTRATIONS_DIR, illustration)
+    # Prüfen ob die Illustration für den Spell Namen existiert
+    if os.path.exists(illustration_path):
+        illu_image = Image.open(illustration_path).convert("RGBA")
+        front.paste(illu_image, illustration_pos, illu_image)
+    else:
+        print(f"Illustration für {spell_name} nicht gefunden.")
     
     # 2. Front-Frame überlagern
     front.paste(front_frame, (0, 0), front_frame)
@@ -436,7 +378,7 @@ def create_card(spell_data):
 
     draw_text_left_aligned_at(draw_back, info_box_top_left, info_text, FONT_PATH,
                             max_width=info_box_max_width, max_height=info_box_max_height,
-                            max_font_size=info_box_max_font_size, fill="black", wrap_width=wrap_width_info,
+                            max_font_size=info_box_max_font_size, fill="black",
                             line_spacing=2, paragraph_spacing=20)
 
     # Wenn At Higher Levels vorhanden ist, füge es hinzu
@@ -454,11 +396,10 @@ def create_card(spell_data):
     description_box_max_width = 693         # Maximale Breite für den Beschreibungstext (anpassen)
     description_box_max_height = 700        # Maximale Höhe für den Beschreibungstext (anpassen)
     description_box_max_font_size = 40        # Start-Schriftgröße für diesen Bereich
-    wrap_width_description = 60               # Wrap-Wert, anpassbar
     
     draw_text_left_aligned_at(draw_back, description_box_top_left, description_text, FONT_PATH,
                            max_width=description_box_max_width, max_height=description_box_max_height,
-                           max_font_size=description_box_max_font_size, fill="black", wrap_width=wrap_width_description,
+                           max_font_size=description_box_max_font_size, fill="black",
                            line_spacing=1)
 
 
