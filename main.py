@@ -234,11 +234,15 @@ def create_card(spell_data):
     illustration_pos = (126, 221)
     
     # 1. Illustration einfügen
-    illustration = f"{spell_name.lower().replace(" ","_")}.png"
-    illustration_path = os.path.join(ILLUSTRATIONS_DIR, illustration)
-    # Prüfen ob die Illustration für den Spell Namen existiert
+    illustration_filename = f"{spell_name.lower().replace(' ', '_')}.jpg"
+    illustration_path = os.path.join(ILLUSTRATIONS_DIR, illustration_filename)
+    # Prüfen, ob die Illustration für den Spell vorhanden ist
     if os.path.exists(illustration_path):
         illu_image = Image.open(illustration_path).convert("RGBA")
+        # Skaliere die Illustration auf 556x556 Pixel (ohne Zuschneiden)
+        illu_image = illu_image.resize((556, 556), Image.Resampling.LANCZOS)
+        # Neue Top-Left-Position: (163, 236)
+        illustration_pos = (163, 236)
         front.paste(illu_image, illustration_pos, illu_image)
     else:
         print(f"Illustration für {spell_name} nicht gefunden.")
