@@ -3,13 +3,22 @@ import csv
 import os
 import textwrap
 
+VERSION = "new"
+
 # --------------------------
 # Pfade zu den Assets
 # --------------------------
-ASSETS_DIR = "assets"
-ILLUSTRATIONS_DIR = os.path.join(ASSETS_DIR, "illustrations")
-OUTPUT_DIR = "output"
 CSV_DIR    = "csv"
+ILLUSTRATIONS_DIR = os.path.join("assets", "illustrations")
+FONT_PATH = os.path.join("assets", "fonts", "UNISPACE_BD.ttf")
+
+if VERSION == "new":
+    ASSETS_DIR = "assets"
+    OUTPUT_DIR = "output"
+else:
+    ASSETS_DIR = "assets/old"
+    OUTPUT_DIR = "output/old"
+
 
 # Sicherstellen, dass der Ausgabeordner existiert
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -22,6 +31,99 @@ back_bg = Image.open(os.path.join(ASSETS_DIR, "back_background.png")).convert("R
 spellname_banner = Image.open(os.path.join(ASSETS_DIR, "spellname_banner.png")).convert("RGBA")
 # illustration = Image.open(os.path.join(ASSETS_DIR, "illustration.png")).convert("RGBA")
 front_frame = Image.open(os.path.join(ASSETS_DIR, "front_frame.png")).convert("RGBA")
+
+
+# --------------------------
+# Dynamic Asset Positions
+# --------------------------
+if VERSION == "new":
+    ## Front
+    title = {
+        "y_pos": 145,
+        "margin": 80
+    }
+    illustration = {
+        "pos": (138,230),
+        "size": (477, 477)
+    }
+    # Info Box
+    # Wir definieren hier eine maximale Breite und Schriftgröße für diese Infos (anpassbar)
+    center_range = (382, 953)
+    center_casting_time = (604, 845)
+    center_duration = (370, 845)
+    center_components = (604, 953)
+    center_spell_level = (130, 880)
+
+    front_info_boxes = {
+        "max_width": 133,
+        "max_height": 60,
+        "max_font_size": 24,
+        "wrap_width": 18
+    }
+
+    ## Back
+    # Definiere den Bereich für den ersten Teil
+    back_info_box = {
+        "top_left": (120, 229), # Obere linke Ecke der Info-Box
+        "max_width": 582-38,    # Maximale Breite der Info-Box (anpassen)
+        "max_height": 140,      # Maximale Höhe der Info-Box (anpassen)
+        "max_font_size": 20,        # Start-Schriftgröße für diesen Bereich
+        "wrap_width": 60        # Wrap-Wert, je nach durchschnittlicher Zeichenlänge
+    }
+    gap = 15 # Füge einen festen Abstand zwischen den beiden Bereichen ein, z. B. 20 Pixel
+    # Berechne den neue obere linke Ecke für den zweiten Teil
+    # Hier gehen wir davon aus, dass der zweite Bereich direkt unter dem ersten beginnen soll.
+    description_box = {
+        "top_left": (90, back_info_box["top_left"][1] + back_info_box["max_height"] + gap),
+        "max_width": 582-8,       # Maximale Breite für den Beschreibungstext (anpassen)
+        "max_height": 588,      # Maximale Höhe für den Beschreibungstext (anpassen)
+        "max_font_size": 32,    # Start-Schriftgröße für diesen Bereich
+        "wrap_width": 60
+    }
+else:
+    ## Front
+    title = {
+        "y_pos": 135,
+        "margin": 40
+    }
+    illustration = {
+        "pos": (163, 236),
+        "size": (556, 556)
+    }
+    # Info Box
+    # Wir definieren hier eine maximale Breite und Schriftgröße für diese Infos (anpassbar)
+    center_range = (445, 1132)
+    center_casting_time = (445, 1009)
+    center_duration = (692, 1009)
+    center_components = (692, 1132)
+    center_spell_level = (155, 1050)
+    
+    front_info_boxes = {
+        "max_width": 140,
+        "max_height": 40,
+        "max_font_size": 24,
+        "wrap_width": 18
+    }
+
+    ## Back
+    # Definiere den Bereich für den ersten Teil
+    back_info_box = {
+        "top_left": (95, 236),  # Obere linke Ecke der Info-Box
+        "max_width": 693,       # Maximale Breite der Info-Box (anpassen)
+        "max_height": 175,      # Maximale Höhe der Info-Box (anpassen)
+        "max_font_size": 32,    # Start-Schriftgröße für diesen Bereich
+        "wrap_width": 60        # Wrap-Wert, je nach durchschnittlicher Zeichenlänge
+    }
+    gap = 10 # Füge einen festen Abstand zwischen den beiden Bereichen ein, z. B. 20 Pixel
+    # Berechne den neue obere linke Ecke für den zweiten Teil
+    # Hier gehen wir davon aus, dass der zweite Bereich direkt unter dem ersten beginnen soll.
+    description_box = {
+        "top_left": (back_info_box["top_left"][0], back_info_box["top_left"][1] + back_info_box["max_height"] + gap),
+        "max_width": 693,       # Maximale Breite für den Beschreibungstext (anpassen)
+        "max_height": 700,      # Maximale Höhe für den Beschreibungstext (anpassen)
+        "max_font_size": 40,    # Start-Schriftgröße für diesen Bereich
+        "wrap_width": 60
+    }
 
 # --------------------------
 # Klassenbanner in ein Dictionary laden
@@ -37,13 +139,12 @@ for cls in class_names:
     path = os.path.join(ASSETS_DIR, "class_banners", filename)
     if os.path.exists(path):
         class_banners[cls] = Image.open(path).convert("RGBA")
-    else:
-        print(f"Warnung: Banner für {cls} nicht gefunden unter {path}")
+    # else:
+    #     print(f"Warnung: Banner für {cls} nicht gefunden unter {path}")
 
 # --------------------------
 # Schriftarten laden
 # --------------------------
-FONT_PATH = os.path.join(ASSETS_DIR, "fonts", "UNISPACE_BD.ttf")
 title_font = ImageFont.truetype(FONT_PATH, 36)
 detail_font = ImageFont.truetype(FONT_PATH, 24)
 
@@ -177,7 +278,7 @@ def draw_text_centered_at(draw, center, text, font_path, max_width, max_height, 
 
 
 def draw_text_left_aligned_at(draw, top_left, text, font_path, max_width, max_height, max_font_size, fill="black",
-                              max_wrap_width=1000, line_spacing=2, paragraph_spacing=10, min_font_size=10):
+                              max_wrap_width=1000, line_spacing=2, paragraph_spacing=10, min_font_size=12):
     """
     Zeichnet den übergebenen Text linksbündig innerhalb eines definierten Bereichs.
     
@@ -231,7 +332,7 @@ def create_card(spell_data):
     # Seite A: Vorderseite
     # --------------------------
     front = front_bg.copy()
-    illustration_pos = (126, 221)
+
     
     # 1. Illustration einfügen
     illustration_filename = f"{spell_name.lower().replace(' ', '_')}.jpg"
@@ -240,10 +341,8 @@ def create_card(spell_data):
     if os.path.exists(illustration_path):
         illu_image = Image.open(illustration_path).convert("RGBA")
         # Skaliere die Illustration auf 556x556 Pixel (ohne Zuschneiden)
-        illu_image = illu_image.resize((556, 556), Image.Resampling.LANCZOS)
-        # Neue Top-Left-Position: (163, 236)
-        illustration_pos = (163, 236)
-        front.paste(illu_image, illustration_pos, illu_image)
+        illu_image = illu_image.resize(illustration["size"], Image.Resampling.LANCZOS)
+        front.paste(illu_image, illustration["pos"], illu_image)
     else:
         print(f"Illustration für {spell_name} nicht gefunden.")
     
@@ -266,20 +365,18 @@ def create_card(spell_data):
     banner_copy = spellname_banner.copy()
     draw_banner = ImageDraw.Draw(banner_copy)
     # Zentriere den Titel im Banner so, dass der Mittelpunkt bei (banner.width/2, 135) liegt.
-    center_banner = (banner_copy.width // 2, 135)
+    center_banner = (banner_copy.width // 2, title["y_pos"])
     # max_width im Banner: Bannerbreite minus Ränder (z.B. 40 Pixel)
-    max_width_banner = banner_copy.width - 40
+    max_width_banner = banner_copy.width - title["margin"]
     draw_text_centered_at(draw_banner, center_banner, spell_name, FONT_PATH, max_width_banner, max_height=90, max_font_size=36, fill="black", wrap_width=20)
     
     # Das modifizierte Banner an der gewünschten Position einfügen.
-    banner_pos = (0, 0)
-    front.paste(banner_copy, banner_pos, banner_copy)
+    front.paste(banner_copy, (0, 0), banner_copy)
     
     # 5. Weitere Infos auf der Vorderseite hinzufügen
     draw_front = ImageDraw.Draw(front)
     
     ## Spell Level
-    center_spell_level = (155, 1050)
     text_spell_level = spell_data["Level"]
     if text_spell_level == "Cantrip":
         text_spell_level = "0"
@@ -289,40 +386,46 @@ def create_card(spell_data):
                       max_width=90, max_height=85, max_font_size=60, fill="black", wrap_width=20)
 
     ## Info Boxen
-    # Wir definieren hier eine maximale Breite und Schriftgröße für diese Infos (anpassbar)
-    max_width_info = 140
-    max_height_info = 40
-    max_font_info = 24
-    wrap_width_info = 18  # meist kein Zeilenumbruch nötig, kann aber angepasst werden
-
-    ## Obere Reihe (y = 1009)
+    ## Obere Reihe
     # Casting Time links
-    center_casting_time = (445, 1009)
     text_casting_time = spell_data["Casting Time"]
     draw_text_centered_at(draw_front, center_casting_time, text_casting_time, FONT_PATH,
-                      max_width=max_width_info, max_height=max_height_info, max_font_size=max_font_info, fill="black", wrap_width=wrap_width_info)
+                          max_width=front_info_boxes["max_width"],
+                          max_height=front_info_boxes["max_height"],
+                          max_font_size=front_info_boxes["max_font_size"],
+                          fill="black",
+                          wrap_width=front_info_boxes["wrap_width"])
 
-    ## Duration rechts
-    center_duration = (692, 1009)
+    # Duration rechts
     text_duration = spell_data["Duration"]
     draw_text_centered_at(draw_front, center_duration, text_duration, FONT_PATH,
-                        max_width=max_width_info, max_height=max_height_info, max_font_size=max_font_info, fill="black", wrap_width=wrap_width_info)
+                          max_width=front_info_boxes["max_width"],
+                          max_height=front_info_boxes["max_height"],
+                          max_font_size=front_info_boxes["max_font_size"],
+                          fill="black",
+                          wrap_width=front_info_boxes["wrap_width"])
 
-    ## Untere Reihe (y = 1132)
+    ## Untere Reihe
     # Range links
-    center_range = (445, 1132)
     text_range = spell_data["Range"]
     draw_text_centered_at(draw_front, center_range, text_range, FONT_PATH, 
-                          max_width=max_width_info, max_height=max_height_info, max_font_size=max_font_info, fill="black", wrap_width=wrap_width_info)
+                          max_width=front_info_boxes["max_width"],
+                          max_height=front_info_boxes["max_height"],
+                          max_font_size=front_info_boxes["max_font_size"],
+                          fill="black",
+                          wrap_width=front_info_boxes["wrap_width"])
 
     # Components rechts
-    center_components = (692, 1132)
     # Wenn die Komponenten M vorhanden sind, dann sollen die Materialkomponenten nicht gelistet werden.
     text_components = spell_data["Components"]
     if "(" in text_components and ")" in text_components:
         text_components = text_components.split("(")[0].strip()
     draw_text_centered_at(draw_front, center_components, text_components, FONT_PATH,
-                      max_width=max_width_info, max_height=max_height_info, max_font_size=max_font_info, fill="black", wrap_width=wrap_width_info)
+                          max_width=front_info_boxes["max_width"],
+                          max_height=front_info_boxes["max_height"],
+                          max_font_size=front_info_boxes["max_font_size"],
+                          fill="black",
+                          wrap_width=front_info_boxes["wrap_width"])
 
     # Speichere die Vorderseite
     front_filename = os.path.join(OUTPUT_DIR, f"{spell_name}_front.png")
@@ -351,39 +454,37 @@ def create_card(spell_data):
     banner_copy = spellname_banner.copy()
     draw_banner = ImageDraw.Draw(banner_copy)
     # Zentriere den Titel im Banner so, dass der Mittelpunkt bei (banner.width/2, 135) liegt.
-    center_banner = (banner_copy.width // 2, 135)
+    center_banner = (banner_copy.width // 2, title["y_pos"])
     # max_width im Banner: Bannerbreite minus Ränder (z.B. 40 Pixel)
-    max_width_banner = banner_copy.width - 40
+    max_width_banner = banner_copy.width - title["margin"]
     draw_text_centered_at(draw_banner, center_banner, spell_name, FONT_PATH, max_width_banner, max_height=90, max_font_size=36, fill="black", wrap_width=20)
     
     # Das modifizierte Banner an der gewünschten Position einfügen.
-    banner_pos = (0, 0)
-    back.paste(banner_copy, banner_pos, banner_copy)
+    back.paste(banner_copy, (0, 0), banner_copy)
 
-    # Erster Teil: Statische Key-Informationen
+    ## Erster Teil: Statische Key-Informationen
+    # Edit out unused classes
+    class_list = spell_data["Classes"].split(", ")
+    for cls in class_list:
+        if cls not in class_names:
+            class_list.remove(cls)
+    class_list = ", ".join(class_list)
+
     info_text = (
-        f"Level:         {spell_data['Level']}\n"
-        f"Casting Time:  {spell_data['Casting Time']}\n"
-        f"Duration:      {spell_data['Duration']}\n"
-        f"Range:         {spell_data['Range']}\n"
-        f"Components:    {spell_data['Components']}\n"
-        f"Classes:       {spell_data['Classes']}"
+        f"Level:        {spell_data['Level']}\n"
+        f"Casting Time: {spell_data['Casting Time']}\n"
+        f"Duration:     {spell_data['Duration']}\n"
+        f"Range:        {spell_data['Range']}\n"
+        f"Components:   {spell_data['Components']}\n"
+        f"Classes:      {class_list}"
     )
 
-    # Füge einen festen Abstand zwischen den beiden Bereichen ein, z. B. 20 Pixel
-    gap = 10
-
-    # Definiere den Bereich für den ersten Teil
-    info_box_top_left = (95, 236)       # Obere linke Ecke der Info-Box
-    info_box_max_width = 693            # Maximale Breite der Info-Box (anpassen)
-    info_box_max_height = 175           # Maximale Höhe der Info-Box (anpassen)
-    info_box_max_font_size = 32         # Start-Schriftgröße für diesen Bereich
-    wrap_width_info = 60                # Wrap-Wert, je nach durchschnittlicher Zeichenlänge
-
-    draw_text_left_aligned_at(draw_back, info_box_top_left, info_text, FONT_PATH,
-                            max_width=info_box_max_width, max_height=info_box_max_height,
-                            max_font_size=info_box_max_font_size, fill="black",
-                            line_spacing=2, paragraph_spacing=20)
+    draw_text_left_aligned_at(draw_back, back_info_box["top_left"],
+                                info_text, FONT_PATH,
+                                max_width=back_info_box["max_width"],
+                                max_height=back_info_box["max_height"],
+                                max_font_size=back_info_box["max_font_size"],
+                                fill="black", line_spacing=2, paragraph_spacing=20)
 
     # Wenn At Higher Levels vorhanden ist, füge es hinzu
     if spell_data["At Higher Levels"]:
@@ -392,19 +493,14 @@ def create_card(spell_data):
             f"At Higher Levels:\n{spell_data['At Higher Levels']}"
         )
     else:
-        description_text = f"Description:\n{spell_data['Text']}"
-
-    # Berechne den neue obere linke Ecke für den zweiten Teil
-    # Hier gehen wir davon aus, dass der zweite Bereich direkt unter dem ersten beginnen soll.
-    description_box_top_left = (info_box_top_left[0], info_box_top_left[1] + info_box_max_height + gap)
-    description_box_max_width = 693         # Maximale Breite für den Beschreibungstext (anpassen)
-    description_box_max_height = 700        # Maximale Höhe für den Beschreibungstext (anpassen)
-    description_box_max_font_size = 40        # Start-Schriftgröße für diesen Bereich
+        description_text = f"Description:\n{spell_data['Text']}"  
     
-    draw_text_left_aligned_at(draw_back, description_box_top_left, description_text, FONT_PATH,
-                           max_width=description_box_max_width, max_height=description_box_max_height,
-                           max_font_size=description_box_max_font_size, fill="black",
-                           line_spacing=1)
+    draw_text_left_aligned_at(draw_back, description_box["top_left"],
+                                description_text, FONT_PATH,
+                                max_width=description_box["max_width"],
+                                max_height=description_box["max_height"],
+                                max_font_size=description_box["max_font_size"],
+                                fill="black", line_spacing=1)
 
 
     # Speichere die Rückseite
