@@ -1,3 +1,10 @@
+# Output directories
 /output
 /pdf
+v2/output
+
+# Kiro AI assistant directory
+.kiro
+
+# Asset illustrations
 assets/*illustrations*
